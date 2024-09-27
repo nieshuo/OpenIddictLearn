@@ -20,8 +20,8 @@ namespace OpenIddictLearn.Server
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await context.Database.EnsureCreatedAsync(cancellationToken);
 
-            // await RegisterApplicationsAsync(scope.ServiceProvider);
-            // await RegisterScopesAsync(scope.ServiceProvider);
+            await RegisterApplicationsAsync(scope.ServiceProvider);
+            await RegisterScopesAsync(scope.ServiceProvider);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -32,6 +32,78 @@ namespace OpenIddictLearn.Server
         public static async Task RegisterApplicationsAsync(IServiceProvider provider)
         {
             var manager = provider.GetRequiredService<IOpenIddictApplicationManager>();
+
+            if (await manager.FindByClientIdAsync("console_app") is null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ApplicationType = ApplicationTypes.Native,
+                    ClientId = "console_app",
+                    ClientType = ClientTypes.Public,
+                    RedirectUris =
+                {
+                    new Uri("http://localhost/")
+                },
+                    Permissions =
+                {
+                    Permissions.Endpoints.Authorization,
+                    Permissions.Endpoints.Token,
+                    Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.ResponseTypes.Code,
+                    Permissions.Scopes.Email,
+                    Permissions.Scopes.Profile,
+                    Permissions.Scopes.Roles,
+                    Permissions.Prefixes.Scope + "api1",
+                    Permissions.Prefixes.Scope + "api2"
+                }
+                });
+            }
+
+            if (await manager.FindByClientIdAsync("spa") is null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "spa",
+                    ClientType = ClientTypes.Public,
+                    RedirectUris =
+                {
+                    new Uri("http://localhost:5112/index.html"),
+                    new Uri("http://localhost:5112/signin-callback.html"),
+                    new Uri("http://localhost:5112/signin-silent-callback.html"),
+                },
+                    Permissions =
+                {
+                    Permissions.Endpoints.Authorization,
+                    Permissions.Endpoints.Logout,
+                    Permissions.Endpoints.Token,
+                    Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.GrantTypes.RefreshToken,
+                    Permissions.ResponseTypes.Code,
+                    Permissions.Scopes.Email,
+                    Permissions.Scopes.Profile,
+                    Permissions.Scopes.Roles,
+                    Permissions.Prefixes.Scope + "api1",
+                    Permissions.Prefixes.Scope + "api2"
+                },
+                    Requirements =
+                {
+                    Requirements.Features.ProofKeyForCodeExchange,
+                },
+                });
+            }
+
+            if (await manager.FindByClientIdAsync("resource_server_1") is null)
+            {
+                await manager.CreateAsync(new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "resource_server_1",
+                    ClientSecret = "846B62D0-DEF9-4215-A99D-86E6B8DAB342",
+                    Permissions =
+                {
+                    Permissions.Endpoints.Introspection
+                }
+                });
+            }
 
             // Angular UI client
             if (await manager.FindByClientIdAsync("angularclient") is null)
@@ -156,6 +228,30 @@ namespace OpenIddictLearn.Server
         public static async Task RegisterScopesAsync(IServiceProvider provider)
         {
             var manager = provider.GetRequiredService<IOpenIddictScopeManager>();
+
+            if (await manager.FindByNameAsync("api1") is null)
+            {
+                await manager.CreateAsync(new OpenIddictScopeDescriptor
+                {
+                    Name = "api1",
+                    Resources =
+                {
+                    "resource_server_1"
+                }
+                });
+            }
+
+            if (await manager.FindByNameAsync("api2") is null)
+            {
+                await manager.CreateAsync(new OpenIddictScopeDescriptor
+                {
+                    Name = "api2",
+                    Resources =
+                {
+                    "resource_server_2"
+                }
+                });
+            }
 
             if (await manager.FindByNameAsync("dataEventRecords") is null)
             {

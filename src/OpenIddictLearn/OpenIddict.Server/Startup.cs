@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
@@ -13,10 +10,10 @@ using OpenIddict.Abstractions;
 using OpenIddict.Server.Data;
 using OpenIddict.Server.Models;
 using OpenIddictLearn.Server;
+using OpenIddictLearn.Server.Jobs;
 using Quartz;
 using System.Globalization;
 using System.Reflection;
-using System.Security.Claims;
 
 namespace OpenIddict.Server
 {
@@ -90,11 +87,11 @@ namespace OpenIddict.Server
                 // this defines a CORS policy called "default"
                 options.AddPolicy("AllowAllOrigins", builder =>
                 {
-                    //builder.AllowAnyOrigin()
-                    builder.WithOrigins("http://192.168.97.158:3000", "http://116.62.149.236:8081")
+                    builder.AllowAnyOrigin()
+                    //builder.WithOrigins("http://192.168.97.158:3000", "http://116.62.149.236:8081")
                         .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
+                        .AllowAnyMethod();
+                        //.AllowCredentials();
                 });
             });
 
@@ -104,6 +101,16 @@ namespace OpenIddict.Server
             {
                 options.UseSimpleTypeLoader();
                 options.UseInMemoryStore();
+
+                options.AddJob<TokenCleanupJob>(configure => {
+
+                    configure.WithIdentity("cleartoken").WithDescription("清理Token");
+                });
+                options.AddTrigger(configure =>
+                {
+                    //每半小时清理一次，按需求 此为测试
+                    configure.WithIdentity("cleartoken").WithDescription("清理Token").WithCronSchedule("0 0/30 * * * ?").ForJob("cleartoken");
+                });
             });
 
             // Register the Quartz.NET service and configure it to block shutdown until jobs are complete.
@@ -179,7 +186,13 @@ namespace OpenIddict.Server
                         OpenIddictConstants.Permissions.Scopes.Email,
                         OpenIddictConstants.Permissions.Scopes.Profile,
                         OpenIddictConstants.Permissions.Scopes.Roles,
-                        "api1");
+                        "dataEventRecords");
+
+                    // Note: in a real world application, this encryption key should be
+                    // stored in a safe place (e.g in Azure KeyVault, stored as a secret).
+                    //options.AddEncryptionKey(new SymmetricSecurityKey(
+                    //    Convert.FromBase64String("DRjd/GnduI3Efzen9V9BvbNUfc/VKgXltV7Kbk9sMkY=")));
+
 
                     // Set the lifetime of your tokens
                     options.SetAccessTokenLifetime(TimeSpan.FromMinutes(30));
