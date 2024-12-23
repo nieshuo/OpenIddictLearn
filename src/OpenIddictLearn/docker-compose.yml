@@ -1,0 +1,33 @@
+services:
+  openiddictlearnserver:
+    image: 'openiddictlearnserver'
+    container_name: openiddictlearnserver
+    restart: on-failure:5
+    depends_on: 
+      - openiddictpostgres
+    ports:
+      - "6000:8080"
+      - "6001:8081"
+    environment:      
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=fujian
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - ConnectionStrings__OpenIddictLearn_db=Host=postgres;Port=5432;Database=OpenIddictLearn_db;Username=postgres;Password=postgres;Include Error Detail=true
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      # - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ~/.aspnet/https:/https:ro
+  openiddictpostgres:
+    image: postgres
+    container_name: openiddictpostgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=OpenIddictLearn_db
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.containers/db:/var/lib/postgresql/data
